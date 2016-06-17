@@ -293,7 +293,7 @@ def Program(a, b, roundnum):
                 table.cell(0, 0).text='#'
                 for n in range(1, rowcount):
                     table.cell(n, 0).text=str(n)+'.'
-                newcol=1
+                newcol=0
                 typedict={}
 
         if type=='end repeat':
