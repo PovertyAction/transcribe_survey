@@ -1,3 +1,12 @@
+#**********************************************************************
+#                 Convert ODK File to Paper Survey
+#   Name: Zachary Groff
+#   Email: zgroff@poverty-action.org
+#   Date: June 17, 2016
+#   Purpose: Take ODK files in .xlsx format and convert them to word.
+#   Needed Programs: openpyxl, python-docx (can use pip install to install)
+#**********************************************************************
+
 #*****************
 #Specify variables
 #*****************
