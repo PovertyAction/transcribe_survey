@@ -3,10 +3,10 @@
 #*****************
 
 #Specify name of document to import in quotes.
-excelname='ICM 6th Month Survey V10.0.xlsx'
+excelname='CEA_CU_2016_v3.xlsx'
 
 #Specify name to save document as in quotes.
-wordname='ICM 6th Month Survey V10.0.docx'
+wordname='CEA_CU_2016_v3.docx'
 
 #Specify language (leave empty if only one choice). MUST LEAVE EMPTY IF ONLY ONE LABEL COLUMN - MUST SELECT IF MULTIPLE LANGUAGES IN SURVEY
 language='English'
@@ -20,11 +20,17 @@ formtitle='CEA'
 #Suppress repeats (=1 to suppress repeats).
 suppress=1
 
+#Show relevance.
+relevances=0
+
+#Show constraints.
+constraints=0
+
 #Show notes that refer to previous fields (=1 to show notes).
-notes=1
+notes=0
 
 #Show calculate fields (=1 to show calculate fields).
-calculates=1
+calculates=0
 
 #Import docx program
 import openpyxl
@@ -80,7 +86,6 @@ intro3=document.add_paragraph('Sim ID (Serial):____________________    Device ph
 #Define printing function for questions not in a repeat group.
 def QuestionState(query, tip, sort, chart, colnum):
     global number
-    global newcol
     number += 1
     if tableyesno==0:
         qp=document.add_paragraph(str(number)+'. '+query)
@@ -112,7 +117,7 @@ def OptionList(paths, category):
     for y in range(2, choices.max_row):
         list_name=choices[chcoldict['list_name']+str(y)].value
         name=choices[chcoldict['name']+str(y)].value
-        label=choices[chcoldict['label']+str(y)].value
+        label=ReplaceRefs(choices[chcoldict['label']+str(y)].value, 'C')
         if not isinstance(label, (str, unicode)):
             label=unicode(str(label), 'utf-8')
         if list_name==paths:
@@ -140,20 +145,57 @@ def TableTime(repeatgroup):
 #Generate function that scans a phrase and replaces references to earlier fields.
 def ReplaceRefs(phrase, mode):
     tempphrase=phrase
-    if '${' in tempphrase and '}' in tempphrase:
-        referring=0
-        ref=''
-        for n in range(2, len(tempphrase)):
-            if tempphrase[n]=='}':
-                referring=0
-                if ref in qnumbers and mode=='Q':
-                    tempphrase=tempphrase.replace('${'+ref+'}', ' _________ (Answer to Q'+str(qnumbers[ref])+') ')
-                ref=''
-            if referring==1:
-                ref=ref+tempphrase[n]
-            if tempphrase[n-1]=='$' and tempphrase[n]=='{':
-                referring=1
+    if isinstance(tempphrase, str) or isinstance(tempphrase, unicode):
+        if '${' in tempphrase and '}' in tempphrase:
+            referring=0
+            ref=''
+            replacements={}
+            for n in range(1, len(tempphrase)):
+                print n
+                if tempphrase[n]=='}':
+                    referring=0
+                    if ref in qnumbers and mode=='Q':
+                        replacements['${'+ref+'}']=' _________ (Answer to Q'+str(qnumbers[ref])+') '
+                    if ref in qnumbers and mode=='A':
+                        replacements['${'+ref+'}']= ' the answer to Q'+str(qnumbers[ref])+' '
+                    if ref in qnumbers and mode=='C':
+                        replacements['${'+ref+'}']= '[Answer to Q'+str(qnumbers[ref])+']'
+                    ref=''
+                if referring==1:
+                    ref=ref+tempphrase[n]
+                if tempphrase[n-1]=='$' and tempphrase[n]=='{':
+                    referring=1
+                print ref
+            for key in replacements.keys():
+                tempphrase=tempphrase.replace(key, replacements[key])
     return tempphrase     
+
+#Generate function to translate expressions into English.
+def TranslateCalc(exp, variety):
+    newexp=exp
+    if variety!='constraint':
+        verb='is '
+    else:
+        verb='must be '
+    newexp=newexp.replace('selected(', 'selected options include [')
+    newexp=newexp.replace('string-length(', 'length of ')
+    newexp=newexp.replace('.', 'answer ')
+    newexp=newexp.replace('>=', verb+'greater than or equal to ')
+    newexp=newexp.replace('<=', verb+'less than or equal to ')
+    newexp=newexp.replace('>', verb+'greater than ')
+    newexp=newexp.replace('<', verb+'less than ')
+    newexp=newexp.replace('+', 'plus ')
+    newexp=newexp.replace('-', 'minus ')
+    newexp=newexp.replace('/', 'divided by')
+    newexp=newexp.replace('*', 'times ')
+    newexp=newexp.replace('=', 'equals ')
+    if '(' in newexp:
+        newexp=newexp.replace(')', '] ')
+    newexp=newexp.replace('(', ' [')
+    if variety!='relevance':
+        newexp=newexp.capitalize()
+    newexp=newexp+'.'
+    return newexp
 
 #Row by Row
 tableyesno=0
@@ -166,7 +208,7 @@ def Program(a, b, roundnum):
         global repeat
         print number
         type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
-        programmed=type in ['text', 'integer', 'geopoint', 'note'] or type.partition(' ')[0] in ['select_one', 'select_multiple']
+        programmed=type in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or type.partition(' ')[0] in ['select_one', 'select_multiple']
         qnumbers[survey[survcoldict['name']+str(x)].value]=number
         question=survey[survcoldict['label']+str(x)].value
         if question!=None:
@@ -177,7 +219,44 @@ def Program(a, b, roundnum):
         if question==None:
             question=''
 
-        hint=survey['D'+str(x)].value
+        hint=survey[survcoldict['hint']+str(x)].value
+        print hint
+        if isinstance(hint, unicode):
+            hint=unicodedata.normalize('NFKD', hint).encode('ascii', 'ignore')
+            hint=str(hint)
+            hint=hint+'.'
+        print isinstance(hint, str)
+
+        constraint=survey[survcoldict['constraint']+str(x)].value
+        print constraint
+        if isinstance(constraint, unicode):
+            unicodedata.normalize('NFKD', constraint).encode('ascii', 'ignore')
+            constraint=str(constraint)
+        if isinstance(constraint, str):
+            constraint=TranslateCalc(ReplaceRefs(constraint, 'A'), 'constraint')
+            if isinstance(hint, str) and constraints==1:
+                hint=hint+'  '+constraint
+            elif constraints==1:
+                hint=constraint
+        print isinstance(constraint, str)
+        print constraint
+        print hint
+        relevance=survey[survcoldict['relevance']+str(x)].value
+        print relevance
+        if isinstance(relevance, unicode):
+            unicodedata.normalize('NFKD', relevance).encode('ascii', 'ignore')
+            relevance=str(relevance)
+        if isinstance(relevance, str):
+            relevance=TranslateCalc(ReplaceRefs(relevance, 'A'), 'relevance')
+            if isinstance(hint, str) and relevances==1:
+                hint=hint+'  Only ask if '+relevance
+            elif relevances==1:
+                hint='Only ask if '+relevance
+        print isinstance(relevance, str)
+        print relevance
+        print hint
+        if isinstance(hint, str):
+            hint=hint.replace('..', '.')
 
         if type=='begin repeat':
             repeatcount=survey[survcoldict['repeat_count']+str(x)].value
@@ -237,7 +316,7 @@ def Program(a, b, roundnum):
                 QuestionState(question, hint, type, '', '')
                 ans=document.add_paragraph('_________________________________________________________________________________________________________')
                 ans.paragraph_format.space_before=Pt(6)
-            if type=='integer':
+            if type=='integer' or type=='decimal':
                 QuestionState(question, hint, type, '', '')
                 ans=document.add_paragraph('__________________________')
                 ans.paragraph_format.space_before=Pt(6)
@@ -271,7 +350,7 @@ def Program(a, b, roundnum):
             if type=='text' or (type=='note' and ('${' not in question or notes==1)) or ((type=='calculate' or type=='calculate_here') and calculates==1):
                 table.add_column(914400)
                 QuestionState(question, hint, type, table, newcol)
-            if type=='integer':
+            if type=='integer' or type=='decimal':
                 table.add_column(360000)
                 QuestionState(question, hint, type, table, newcol)
             if type.partition(' ')[0]=='select_one':
