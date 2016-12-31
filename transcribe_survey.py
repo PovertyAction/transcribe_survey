@@ -24,19 +24,19 @@ language='English'
 defaultrc=11
 
 #Specify title of survey if different from "form_title."
-formtitle='CEA'
+formtitle=''
 
 #Suppress repeats (=1 to suppress repeats).
 suppress=1
 
 #Show relevance.
-relevances=0
+relevances=1
 
 #Show constraints.
-constraints=0
+constraints=1
 
 #Show notes that refer to previous fields (=1 to show notes).
-notes=0
+notes=1
 
 #Show calculate fields (=1 to show calculate fields).
 calculates=0
@@ -78,6 +78,10 @@ for l in string.ascii_uppercase:
         survcoldict['label']=l
     if choices[l+'1'].value=='label:'+language:
         chcoldict['label']=l
+    if survey[l+'1'].value=='hint:'+language:
+        survcoldict['hint']=l
+    if choices[l+'1'].value=='hint:'+language:
+        chcoldict['hint']=l
 
 print survcoldict
 print chcoldict
