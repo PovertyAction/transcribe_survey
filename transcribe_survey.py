@@ -97,7 +97,7 @@ intro2=document.add_paragraph('Device ID:____________________               Subs
 intro3=document.add_paragraph('Sim ID (Serial):____________________    Device phone number:____________________')
 
 #Define printing function for questions not in a repeat group.
-def QuestionState(query, tip, sort, chart, colnum):
+def QuestionState(query, tip, sort, chart, colnum, tableyesno):
     global number
     number += 1
     if tableyesno==0:
@@ -202,6 +202,7 @@ def TranslateCalc(exp, variety):
     newexp=newexp.replace('/', 'divided by')
     newexp=newexp.replace('*', 'times ')
     newexp=newexp.replace('=', 'equals ')
+    newexp=newexp.replace('!=', 'does not equal ')
     if '(' in newexp:
         newexp=newexp.replace(')', '] ')
     newexp=newexp.replace('(', ' [')
@@ -211,14 +212,12 @@ def TranslateCalc(exp, variety):
     return newexp
 
 #Row by Row
-tableyesno=0
+repeat=0
 number=0
 qnumbers={}
 repeat=0
-def Program(a, b, roundnum):
+def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
     for x in range(a, b):
-        global tableyesno
-        global repeat
         print number
         type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
         programmed=type in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or type.partition(' ')[0] in ['select_one', 'select_multiple']
@@ -326,29 +325,29 @@ def Program(a, b, roundnum):
             if type=='begin group':
                 document.add_heading(question, 1)
             if type=='text' or ((type=='calculate' or type=='calculate_here') and calculates==1):
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
                 ans=document.add_paragraph('_________________________________________________________________________________________________________')
                 ans.paragraph_format.space_before=Pt(6)
             if type=='integer' or type=='decimal':
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
                 ans=document.add_paragraph('__________________________')
                 ans.paragraph_format.space_before=Pt(6)
             if type.partition(' ')[0]=='select_one':
                 question=question+' (select one)'
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
                 choicetype=type.partition(' ')[0]
                 options=type.partition(' ')[2]
                 OptionList(options, choicetype)
             if type.partition(' ')[0]=='select_multiple':
                 question=question+' (select multiple)'
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
                 choicetype=type.partition(' ')[0]
                 options=type.partition(' ')[2]
                 OptionList(options, choicetype)
             if type=='note' and ('${' not in question or notes==1):
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
             if type=='geopoint':
-                QuestionState(question, hint, type, '', '')
+                QuestionState(question, hint, type, '', '', tableyesno)
                 ans=document.add_paragraph("Latitude:  __  __* __' __\"")
                 ans=document.add_paragraph("Longitude: __  __* __' __\"")
                 ans=document.add_paragraph("Altitude:  ______m")
@@ -362,21 +361,21 @@ def Program(a, b, roundnum):
                 table.cell(0, newcol).text='END GROUP'
             if type=='text' or (type=='note' and ('${' not in question or notes==1)) or ((type=='calculate' or type=='calculate_here') and calculates==1):
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol)
+                QuestionState(question, hint, type, table, newcol, tableyesno)
             if type=='integer' or type=='decimal':
                 table.add_column(360000)
-                QuestionState(question, hint, type, table, newcol)
+                QuestionState(question, hint, type, table, newcol, tableyesno)
             if type.partition(' ')[0]=='select_one':
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol)
+                QuestionState(question, hint, type, table, newcol, tableyesno)
                 typedict[type.partition(' ')[2]]='select_one'
             if type.partition(' ')[0]=='select_multiple':
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol)
+                QuestionState(question, hint, type, table, newcol, tableyesno)
                 typedict[type.partition(' ')[2]]='select_multiple'
             if type=='geopoint':
                 table.add_column(1600000)
-                QuestionState(question, hint, type, table, newcol)
+                QuestionState(question, hint, type, table, newcol, tableyesno)
                 for n in range(1, rowcount):
                     table.cell(n, newcol).text="Latitude:  __  __* __' __\" \n Longitude: __  __* __' __\" \n Altitude:  ______m \n Accuracy:  ______m"
             if programmed:
@@ -386,8 +385,8 @@ def Program(a, b, roundnum):
             c=x
             repeatcount=repeatcount-1
             for i in range(0, repeatcount):
-                Program(c, d, ': Round '+str(i+1))
+                Program(c, d, ': Round '+str(i+1), 0, repeat)
 
-Program(8, survey.max_row, '')
+Program(8, survey.max_row, '', 0, 0)
             
 document.save(wordname)
