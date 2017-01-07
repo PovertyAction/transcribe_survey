@@ -168,11 +168,11 @@ def ReplaceRefs(phrase, mode):
                 if tempphrase[n]=='}':
                     referring=0
                     if ref in qnumbers and mode=='Q':
-                        replacements['${'+ref+'}']=' _________ (Answer to Q'+str(qnumbers[ref])+') '
+                        replacements['${'+ref+'}']=' _________ (Answer to Q'+str(qnumbers[ref]+1)+') '
                     if ref in qnumbers and mode=='A':
-                        replacements['${'+ref+'}']= ' the answer to Q'+str(qnumbers[ref])+' '
+                        replacements['${'+ref+'}']= ' the answer to Q'+str(qnumbers[ref]+1)+' '
                     if ref in qnumbers and mode=='C':
-                        replacements['${'+ref+'}']= '[Answer to Q'+str(qnumbers[ref])+']'
+                        replacements['${'+ref+'}']= '[Answer to Q'+str(qnumbers[ref]+1)+']'
                     ref=''
                 if referring==1:
                     ref=ref+tempphrase[n]
