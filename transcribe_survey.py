@@ -29,6 +29,9 @@ formtitle=''
 #Suppress repeats (=1 to suppress repeats).
 suppress=1
 
+#Use tables for formating.
+tablesinclude=0
+
 #Show relevance.
 relevances=1
 
@@ -72,8 +75,14 @@ document = Document()
 survcoldict={}
 chcoldict={}
 for l in string.ascii_uppercase:
-    survcoldict[str(survey[l+'1'].value)]=l
-    chcoldict[str(choices[l+'1'].value)]=l
+    if isinstance(survey[l+'1'].value, str):
+        survcoldict[str(survey[l+'1'].value)]=l
+    elif survey[l+'1'].value!=None:
+        survcoldict[unicodedata.normalize('NFKD', survey[l+'1'].value).encode('ascii','ignore')]=l
+    if isinstance(choices[l+'1'].value, str):
+        chcoldict[str(choices[l+'1'].value)]=l        
+    elif choices[l+'1'].value!=None:
+        chcoldict[unicodedata.normalize('NFKD', choices[l+'1'].value).encode('ascii','ignore')]=l
     if survey[l+'1'].value=='label:'+language:
         survcoldict['label']=l
     if choices[l+'1'].value=='label:'+language:
@@ -129,7 +138,7 @@ def OptionList(paths, category):
     #    optlet=string.ascii_lowercase[optnum]
     for y in range(2, choices.max_row):
         list_name=choices[chcoldict['list_name']+str(y)].value
-        name=choices[chcoldict['name']+str(y)].value
+        name=choices[chcoldict['value']+str(y)].value
         label=ReplaceRefs(choices[chcoldict['label']+str(y)].value, 'C')
         if not isinstance(label, (str, unicode)):
             label=unicode(str(label), 'utf-8')
@@ -201,8 +210,8 @@ def TranslateCalc(exp, variety):
     newexp=newexp.replace('-', 'minus ')
     newexp=newexp.replace('/', 'divided by')
     newexp=newexp.replace('*', 'times ')
-    newexp=newexp.replace('=', 'equals ')
     newexp=newexp.replace('!=', 'does not equal ')
+    newexp=newexp.replace('=', 'equals ')
     if '(' in newexp:
         newexp=newexp.replace(')', '] ')
     newexp=newexp.replace('(', ' [')
@@ -292,7 +301,8 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                     check=check+1
                 elif survey[survcoldict['type']+str(z)].value=='end repeat':
                     check=check-1
-            tableyesno=TableTime(unicodedata.normalize('NFKD', survey[survcoldict['name']+str(x)].value).encode('ascii', 'ignore'))
+            if tablesinclude==1:
+                tableyesno=TableTime(unicodedata.normalize('NFKD', survey[survcoldict['name']+str(x)].value).encode('ascii', 'ignore'))
             if tableyesno==1:
                 if repeatcount!=None:
                     rowcount=repeatcount
