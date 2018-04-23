@@ -12,16 +12,16 @@
 #*****************
 
 #Specify name of document to import in quotes.
-excelname='CEA_CU_2016_v3.xlsx'
+excelname='SPREADSHEET_NAME.xlsx'
 
 #Specify name to save document as in quotes.
-wordname='CEA_CU_2016_v3.docx'
+wordname='DOCUMENT_NAME.docx'
 
 #Specify language (leave empty if only one choice). MUST LEAVE EMPTY IF ONLY ONE LABEL COLUMN - MUST SELECT IF MULTIPLE LANGUAGES IN SURVEY
-language='English'
+language=''
 
 #Specify the default number of repeat groups.
-defaultrc=11
+defaultrc=10
 
 #Specify title of survey if different from "form_title."
 formtitle=''
@@ -30,7 +30,7 @@ formtitle=''
 suppress=1
 
 #Use tables for formating.
-tablesinclude=0
+tablesinclude=1
 
 #Show relevance.
 relevances=1
@@ -228,8 +228,6 @@ repeat=0
 def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
     for x in range(a, b):
         print number
-        print x
-        print survey[survcoldict['type']+str(x)].value
         type=''
         if survey[survcoldict['type']+str(x)].value!=None:
             type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
