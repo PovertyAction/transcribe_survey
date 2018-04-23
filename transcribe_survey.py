@@ -228,7 +228,13 @@ repeat=0
 def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
     for x in range(a, b):
         print number
-        type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
+        print x
+        print survey[survcoldict['type']+str(x)].value
+        type=''
+        if survey[survcoldict['type']+str(x)].value!=None:
+            type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
+        if type=='':
+            print "Survey appears to skip a row at line "+str(x)+" because question type is blank. Please make sure this is correct."
         programmed=type in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or type.partition(' ')[0] in ['select_one', 'select_multiple']
         qnumbers[survey[survcoldict['name']+str(x)].value]=number
         question=survey[survcoldict['label']+str(x)].value
