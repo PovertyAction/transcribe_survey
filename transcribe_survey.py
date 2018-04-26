@@ -98,7 +98,7 @@ print "The columns in the choices tab are: "+str(chcoldict)
 
 #Title and initial info
 print "Title of form: "+str(settings['A2'].value)
-if formtitle!='':
+if formtitle=='':
     formtitle=settings['A2'].value
 document.add_heading(formtitle, 0)
 intro1=document.add_paragraph('Start time:__________                                End time:__________')
