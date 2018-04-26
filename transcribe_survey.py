@@ -1,3 +1,4 @@
+#-*- coding: utf-8 -*-
 #**********************************************************************
 #                 Convert ODK File to Paper Survey
 #   Name: Zachary Groff
@@ -27,7 +28,7 @@ defaultrc=10
 formtitle=''
 
 #Suppress repeats (=1 to suppress repeats).
-suppress=1
+suppress=0
 
 #Use tables for formating.
 tablesinclude=1
@@ -64,9 +65,9 @@ import unicodedata
 
 #Import excel document
 wb = openpyxl.load_workbook(excelname)
-survey=wb.get_sheet_by_name('survey')
-choices=wb.get_sheet_by_name('choices')
-settings=wb.get_sheet_by_name('settings')
+survey=wb['survey']
+choices=wb['choices']
+settings=wb['settings']
 
 #Create word document
 document = Document()
@@ -92,12 +93,11 @@ for l in string.ascii_uppercase:
     if choices[l+'1'].value=='hint:'+language:
         chcoldict['hint']=l
 
-print survcoldict
-print chcoldict
+print "The columns in the survey tab are: "+str(survcoldict)
+print "The columns in the choices tab are: "+str(chcoldict)
 
 #Title and initial info
-print settings
-print settings['A2'].value
+print "Title of form: "+str(settings['A2'].value)
 if formtitle!='':
     formtitle=settings['A2'].value
 document.add_heading(formtitle, 0)
@@ -173,7 +173,6 @@ def ReplaceRefs(phrase, mode):
             ref=''
             replacements={}
             for n in range(1, len(tempphrase)):
-                print n
                 if tempphrase[n]=='}':
                     referring=0
                     if ref in qnumbers and mode=='Q':
@@ -187,7 +186,6 @@ def ReplaceRefs(phrase, mode):
                     ref=ref+tempphrase[n]
                 if tempphrase[n-1]=='$' and tempphrase[n]=='{':
                     referring=1
-                print ref
             for key in replacements.keys():
                 tempphrase=tempphrase.replace(key, replacements[key])
     return tempphrase     
@@ -227,33 +225,36 @@ qnumbers={}
 repeat=0
 def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
     for x in range(a, b):
-        print number
-        type=''
+        typ=''
         if survey[survcoldict['type']+str(x)].value!=None:
-            type=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
-        if type=='':
-            print "Survey appears to skip a row at line "+str(x)+" because question type is blank. Please make sure this is correct."
-        programmed=type in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or type.partition(' ')[0] in ['select_one', 'select_multiple']
+            typ=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
+        if typ=='':
+            print "\nSurvey appears to skip a row at line "+str(x)+" because question type is blank. Please make sure this is correct."
+        programmed=typ in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or typ.partition(' ')[0] in ['select_one', 'select_multiple']
         qnumbers[survey[survcoldict['name']+str(x)].value]=number
         question=survey[survcoldict['label']+str(x)].value
         if question!=None:
             question=unicodedata.normalize('NFKD', question).encode('ascii', 'ignore')
         if question!=None and programmed:
             question=ReplaceRefs(question, 'Q')
-        print question
         if question==None:
             question=''
 
+        if programmed and typ not in ['begin group', 'end group', 'begin repeat', 'end repeat']:
+            print "\nProcessing question number "+str(number+1)+":"
+            print "Question—"+question
+        if typ=='begin group':
+            print "\n*****************New Group: "+question+"*****************"
+        if typ=='end group':
+            print "\n*****************End Group: "+question+"*****************"
+
         hint=survey[survcoldict['hint']+str(x)].value
-        print hint
         if isinstance(hint, unicode):
             hint=unicodedata.normalize('NFKD', hint).encode('ascii', 'ignore')
             hint=str(hint)
             hint=hint+'.'
-        print isinstance(hint, str)
 
         constraint=survey[survcoldict['constraint']+str(x)].value
-        print constraint
         if isinstance(constraint, unicode):
             unicodedata.normalize('NFKD', constraint).encode('ascii', 'ignore')
             constraint=str(constraint)
@@ -263,11 +264,8 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                 hint=hint+'  '+constraint
             elif constraints==1:
                 hint=constraint
-        print isinstance(constraint, str)
-        print constraint
-        print hint
+                
         relevance=survey[survcoldict['relevance']+str(x)].value
-        print relevance
         if isinstance(relevance, unicode):
             unicodedata.normalize('NFKD', relevance).encode('ascii', 'ignore')
             relevance=str(relevance)
@@ -277,13 +275,14 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                 hint=hint+'  Only ask if '+relevance
             elif relevances==1:
                 hint='Only ask if '+relevance
-        print isinstance(relevance, str)
-        print relevance
-        print hint
         if isinstance(hint, str):
             hint=hint.replace('..', '.')
 
-        if type=='begin repeat':
+        if hint!=None:
+            print "Hint—"+hint
+
+        if typ=='begin repeat':
+            print "\n*************New Repeat Group: "+question+"**************"
             repeatcount=survey[survcoldict['repeat_count']+str(x)].value
             if not isinstance(survey[survcoldict['repeat_count']+str(x)].value, int):
                 repeatcount=defaultrc
@@ -296,8 +295,6 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
             check=repeat
             d=0
             for z in range(x, b):
-                print survey[survcoldict['type']+str(z)].value
-                print 'check is '+str(check)+' and repeat is '+str(repeat)
                 if survey[survcoldict['type']+str(z)].value=='end repeat' and check==repeat:
                     d=z+1
                     break
@@ -313,7 +310,7 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                 else:
                     rowcount=defaultrc
                 table=document.add_table(rows=rowcount, cols=0)
-                table.style='TableGrid'
+                table.style='Table Grid'
                 table.autofit=False
                 table.add_column(180000)
                 table.cell(0, 0).text='#'
@@ -322,7 +319,8 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                 newcol=0
                 typedict={}
 
-        if type=='end repeat':
+        if typ=='end repeat':
+            print "\n*************End Repeat Group: "+question+"**************"
             repeat=repeat-1
             if tableyesno==1:
                 table.autofit=True
@@ -336,60 +334,60 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
             tableyesno=0
 
         if tableyesno==0:
-            if type=='begin group':
+            if typ=='begin group':
                 document.add_heading(question, 1)
-            if type=='text' or ((type=='calculate' or type=='calculate_here') and calculates==1):
-                QuestionState(question, hint, type, '', '', tableyesno)
+            if typ=='text' or ((typ=='calculate' or typ=='calculate_here') and calculates==1):
+                QuestionState(question, hint, typ, '', '', tableyesno)
                 ans=document.add_paragraph('_________________________________________________________________________________________________________')
                 ans.paragraph_format.space_before=Pt(6)
-            if type=='integer' or type=='decimal':
-                QuestionState(question, hint, type, '', '', tableyesno)
+            if typ=='integer' or typ=='decimal':
+                QuestionState(question, hint, typ, '', '', tableyesno)
                 ans=document.add_paragraph('__________________________')
                 ans.paragraph_format.space_before=Pt(6)
-            if type.partition(' ')[0]=='select_one':
+            if typ.partition(' ')[0]=='select_one':
                 question=question+' (select one)'
-                QuestionState(question, hint, type, '', '', tableyesno)
-                choicetype=type.partition(' ')[0]
-                options=type.partition(' ')[2]
+                QuestionState(question, hint, typ, '', '', tableyesno)
+                choicetype=typ.partition(' ')[0]
+                options=typ.partition(' ')[2]
                 OptionList(options, choicetype)
-            if type.partition(' ')[0]=='select_multiple':
+            if typ.partition(' ')[0]=='select_multiple':
                 question=question+' (select multiple)'
-                QuestionState(question, hint, type, '', '', tableyesno)
-                choicetype=type.partition(' ')[0]
-                options=type.partition(' ')[2]
+                QuestionState(question, hint, typ, '', '', tableyesno)
+                choicetype=typ.partition(' ')[0]
+                options=typ.partition(' ')[2]
                 OptionList(options, choicetype)
-            if type=='note' and ('${' not in question or notes==1):
-                QuestionState(question, hint, type, '', '', tableyesno)
-            if type=='geopoint':
-                QuestionState(question, hint, type, '', '', tableyesno)
+            if typ=='note' and ('${' not in question or notes==1):
+                QuestionState(question, hint, typ, '', '', tableyesno)
+            if typ=='geopoint':
+                QuestionState(question, hint, typ, '', '', tableyesno)
                 ans=document.add_paragraph("Latitude:  __  __* __' __\"")
                 ans=document.add_paragraph("Longitude: __  __* __' __\"")
                 ans=document.add_paragraph("Altitude:  ______m")
                 ans=document.add_paragraph("Accuracy:  ______m")
         else:
-            if type=='begin group':
+            if typ=='begin group':
                 table.add_column(914400)
                 table.cell(0, newcol).text='BEGIN GROUP: '+question
-            if type=='end group':
+            if typ=='end group':
                 table.add_column(914400)
                 table.cell(0, newcol).text='END GROUP'
-            if type=='text' or (type=='note' and ('${' not in question or notes==1)) or ((type=='calculate' or type=='calculate_here') and calculates==1):
+            if typ=='text' or (typ=='note' and ('${' not in question or notes==1)) or ((typ=='calculate' or typ=='calculate_here') and calculates==1):
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol, tableyesno)
-            if type=='integer' or type=='decimal':
+                QuestionState(question, hint, typ, table, newcol, tableyesno)
+            if typ=='integer' or typ=='decimal':
                 table.add_column(360000)
-                QuestionState(question, hint, type, table, newcol, tableyesno)
-            if type.partition(' ')[0]=='select_one':
+                QuestionState(question, hint, typ, table, newcol, tableyesno)
+            if typ.partition(' ')[0]=='select_one':
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol, tableyesno)
-                typedict[type.partition(' ')[2]]='select_one'
-            if type.partition(' ')[0]=='select_multiple':
+                QuestionState(question, hint, typ, table, newcol, tableyesno)
+                typedict[typ.partition(' ')[2]]='select_one'
+            if typ.partition(' ')[0]=='select_multiple':
                 table.add_column(914400)
-                QuestionState(question, hint, type, table, newcol, tableyesno)
-                typedict[type.partition(' ')[2]]='select_multiple'
-            if type=='geopoint':
+                QuestionState(question, hint, typ, table, newcol, tableyesno)
+                typedict[typ.partition(' ')[2]]='select_multiple'
+            if typ=='geopoint':
                 table.add_column(1600000)
-                QuestionState(question, hint, type, table, newcol, tableyesno)
+                QuestionState(question, hint, typ, table, newcol, tableyesno)
                 for n in range(1, rowcount):
                     table.cell(n, newcol).text="Latitude:  __  __* __' __\" \n Longitude: __  __* __' __\" \n Altitude:  ______m \n Accuracy:  ______m"
             if programmed:
@@ -401,6 +399,7 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
             for i in range(0, repeatcount):
                 Program(c, d, ': Round '+str(i+1), 0, repeat)
 
+    
 Program(8, survey.max_row, '', 0, 0)
-            
+        
 document.save(wordname)
