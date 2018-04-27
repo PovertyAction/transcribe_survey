@@ -8,9 +8,9 @@
 #   Needed Programs: openpyxl, python-docx (can use pip install to install)
 #**********************************************************************
 
-#*****************
-#Specify variables
-#*****************
+#***************************************************************
+#Specify the following variables. Do not type below the warning.
+#***************************************************************
 
 #Specify name of document to import in quotes.
 excelname='SPREADSHEET_NAME.xlsx'
@@ -27,10 +27,10 @@ defaultrc=10
 #Specify title of survey if different from "form_title."
 formtitle=''
 
-#Suppress repeats (=1 to suppress repeats).
+#Stop repeats from showing (=1 to suppress repeats).
 suppress=0
 
-#Use tables for formating.
+#Use tables for formating innermost repeat groups.
 tablesinclude=1
 
 #Show relevance.
@@ -39,11 +39,12 @@ relevances=1
 #Show constraints.
 constraints=1
 
-#Show notes that refer to previous fields (=1 to show notes).
-notes=1
-
 #Show calculate fields (=1 to show calculate fields).
 calculates=0
+
+#**********************
+#DO NOT TYPE BELOW HERE
+#**********************
 
 #Import docx program
 import openpyxl
@@ -136,7 +137,7 @@ def OptionList(paths, category):
     #    optlet=string.ascii_lowercase[(optnum+1)/26]+string.ascii_lowercase[(optnum%26)-1]
     #else:
     #    optlet=string.ascii_lowercase[optnum]
-    for y in range(2, choices.max_row):
+    for y in range(2, choices.max_row+1):
         list_name=choices[chcoldict['list_name']+str(y)].value
         name=choices[chcoldict['value']+str(y)].value
         label=ReplaceRefs(choices[chcoldict['label']+str(y)].value, 'C')
@@ -155,7 +156,7 @@ def OptionList(paths, category):
 #Generate variable for which begin repeats should trigger a table.
 def TableTime(repeatgroup):
     tabletime=0
-    for x in range(8, survey.max_row):
+    for x in range(8, survey.max_row+1):
         if survey[survcoldict['type']+str(x)].value=='begin repeat' and survey[survcoldict['name']+str(x)].value==repeatgroup:
             tabletime=1
         if survey[survcoldict['type']+str(x)].value=='begin repeat' and survey[survcoldict['name']+str(x)].value!=repeatgroup:
@@ -176,11 +177,11 @@ def ReplaceRefs(phrase, mode):
                 if tempphrase[n]=='}':
                     referring=0
                     if ref in qnumbers and mode=='Q':
-                        replacements['${'+ref+'}']=' _________ (Answer to Q'+str(qnumbers[ref]+1)+') '
+                        replacements['${'+ref+'}']=' _________ (Answer to Q'+str(qnumbers[ref])+') '
                     if ref in qnumbers and mode=='A':
-                        replacements['${'+ref+'}']= ' the answer to Q'+str(qnumbers[ref]+1)+' '
+                        replacements['${'+ref+'}']= ' the answer to Q'+str(qnumbers[ref])+' '
                     if ref in qnumbers and mode=='C':
-                        replacements['${'+ref+'}']= '[Answer to Q'+str(qnumbers[ref]+1)+']'
+                        replacements['${'+ref+'}']= '[Answer to Q'+str(qnumbers[ref])+']'
                     ref=''
                 if referring==1:
                     ref=ref+tempphrase[n]
@@ -188,6 +189,7 @@ def ReplaceRefs(phrase, mode):
                     referring=1
             for key in replacements.keys():
                 tempphrase=tempphrase.replace(key, replacements[key])
+            print
     return tempphrase     
 
 #Generate function to translate expressions into English.
@@ -212,9 +214,9 @@ def TranslateCalc(exp, variety):
     newexp=newexp.replace('=', 'equals ')
     if '(' in newexp:
         newexp=newexp.replace(')', '] ')
-    newexp=newexp.replace('(', ' [')
+    newexp=newexp.replace('(', ' [').strip()
     if variety!='relevance':
-        newexp=newexp.capitalize()
+        newexp=newexp[0].upper() + newexp[1:]
     newexp=newexp+'.'
     return newexp
 
@@ -224,19 +226,29 @@ number=0
 qnumbers={}
 repeat=0
 def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
-    for x in range(a, b):
+    skip_until=0
+    for x in range(a, b+1):
+        if x<=skip_until:
+            continue
         typ=''
         if survey[survcoldict['type']+str(x)].value!=None:
             typ=unicodedata.normalize('NFKD', survey[survcoldict['type']+str(x)].value).encode('ascii', 'ignore')
         if typ=='':
             print "\nSurvey appears to skip a row at line "+str(x)+" because question type is blank. Please make sure this is correct."
         programmed=typ in ['text', 'integer', 'geopoint', 'note', 'begin group', 'end group', 'begin repeat', 'end repeat'] or typ.partition(' ')[0] in ['select_one', 'select_multiple']
-        qnumbers[survey[survcoldict['name']+str(x)].value]=number
+        if survey[survcoldict['name']+str(x)].value not in qnumbers.keys():
+            qnumbers[survey[survcoldict['name']+str(x)].value]=number+1
+        else:
+            qnumbers[survey[survcoldict['name']+str(x)].value]=str(qnumbers[survey[survcoldict['name']+str(x)].value])+"/"+str(number+1)
         question=survey[survcoldict['label']+str(x)].value
+        if typ=='calculate' or typ=='calculate_here':
+            question=survey[survcoldict['calculation']+str(x)].value
         if question!=None:
             question=unicodedata.normalize('NFKD', question).encode('ascii', 'ignore')
         if question!=None and programmed:
             question=ReplaceRefs(question, 'Q')
+        if (typ=='calculate' or typ=='calculate_here') and question!=None:
+            question=TranslateCalc(ReplaceRefs(question, 'A'), 'calculation')
         if question==None:
             question=''
 
@@ -284,9 +296,9 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
         if typ=='begin repeat':
             print "\n*************New Repeat Group: "+question+"**************"
             repeatcount=survey[survcoldict['repeat_count']+str(x)].value
-            if not isinstance(survey[survcoldict['repeat_count']+str(x)].value, int):
+            if not isinstance(survey[survcoldict['repeat_count']+str(x)].value, (int, long)):
                 repeatcount=defaultrc
-            if roundnum=='' and suppress==0:
+            if repeat % 2==0 and suppress==0:
                 rtitle=document.add_heading('', 2)
                 rtitle.add_run(question).underline=True
             else:
@@ -294,19 +306,19 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
             repeat=repeat+1
             check=repeat
             d=0
-            for z in range(x, b):
+            for z in range(x+1, b+1):
                 if survey[survcoldict['type']+str(z)].value=='end repeat' and check==repeat:
-                    d=z+1
+                    d=z
                     break
-                elif survey[survcoldict['type']+str(z)].value=='begin repeat' and check!=repeat:
+                elif survey[survcoldict['type']+str(z)].value=='begin repeat':
                     check=check+1
                 elif survey[survcoldict['type']+str(z)].value=='end repeat':
                     check=check-1
-            if tablesinclude==1:
+            if tablesinclude==1 and suppress==0:
                 tableyesno=TableTime(unicodedata.normalize('NFKD', survey[survcoldict['name']+str(x)].value).encode('ascii', 'ignore'))
             if tableyesno==1:
                 if repeatcount!=None:
-                    rowcount=repeatcount
+                    rowcount=repeatcount+1
                 else:
                     rowcount=defaultrc
                 table=document.add_table(rows=rowcount, cols=0)
@@ -330,7 +342,8 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                     o=document.add_paragraph('')
                     o.add_run(options).underline = True
                     o.paragraph_format.space_before=Pt(12)
-                    OptionList(options, choicetype)        
+                    OptionList(options, choicetype)
+                document.add_paragraph('')
             tableyesno=0
 
         if tableyesno==0:
@@ -356,7 +369,7 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
                 choicetype=typ.partition(' ')[0]
                 options=typ.partition(' ')[2]
                 OptionList(options, choicetype)
-            if typ=='note' and ('${' not in question or notes==1):
+            if typ=='note':
                 QuestionState(question, hint, typ, '', '', tableyesno)
             if typ=='geopoint':
                 QuestionState(question, hint, typ, '', '', tableyesno)
@@ -393,11 +406,13 @@ def Program(a, b, roundnum, tableyesno=0, repeat=0, repeatcount=0):
             if programmed:
                 newcol=newcol+1
                 
-        if repeat==1 and suppress==0:
+        if repeat % 2==1 and suppress==0 and typ=="begin repeat" and tableyesno==0:
+            skip_until=d
             c=x
-            repeatcount=repeatcount-1
+            repeatcount=repeatcount
             for i in range(0, repeatcount):
                 Program(c, d, ': Round '+str(i+1), 0, repeat)
+            document.add_paragraph('')
 
     
 Program(8, survey.max_row, '', 0, 0)
