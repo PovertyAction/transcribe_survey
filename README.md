@@ -28,7 +28,7 @@ To run this program, either download transcribe_survey.py or clone this GitHub r
 
 Program Options
 ------------------------
-transcribe_survey offers the user options to specify how the survey appears and how comprehensive it is. The options are listed below, with the ones that must be filled out in bold. The one that may need to be filled out depending on the survey are in italics:
+transcribe_survey offers the user options to specify how the survey appears and how comprehensive it is. The options are listed below, with the ones that must be filled out in bold. The one that may need to be filled out depending on the survey is in italics:
 
 **excelname**—This option specifies the path and name of the ODK file to be translated.
 
@@ -40,7 +40,7 @@ formtitle—This option specifies the title of the survey. If not specified, tra
 
 suppress—This option tells the program whether to suppress repeat groups or not. If suppress=1, the program will not repeat repeat groups and will instead act as if the repeat groups are non-repeat groups. If suppress=0, the program will repeat repeat groups.
 
-tablesinclude—This option tells the program tells the survey whether to include tables or not. If tablesinclude=1, the program will format innermost repeat groups as tables. If tablesinclude=0, the program will format all repeat group questions the same as other questions.
+tablesinclude—This option tells the program whether to include tables or not. If tablesinclude=1, the program will format innermost repeat groups as tables. If tablesinclude=0, the program will format all repeat group questions the same as other questions.
 
 relevances—This option tells the program whether to include the relevance column or not. If relevances=1, the program will print relevances, translated into English, as part of hints in italics following questions. If relevances=0, the program will not print relevances.
 
