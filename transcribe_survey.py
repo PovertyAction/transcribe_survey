@@ -19,7 +19,7 @@
 excelname='SPREADSHEET_NAME.xlsx'
 
 #Specify name to save document as in quotes.
-wordname='EP_Baseline_Adult_Survey_Master_Modified.docx'
+wordname='DOCUMENT_NAME.docx'
 
 language=''
 #Specify language (leave empty if only one choice).
