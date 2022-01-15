@@ -30,29 +30,26 @@ Created on Fri Oct 25 11:05:44 2019
 #NOTE: You MUST have openpyxl and python-docx installed in order to run this
 #program. If you do not have them installed, use pip install to install them.
 
-# from contextlib import contextmanager
-# @contextmanager
-# def suppress_stdout():
-#     with open(os.devnull, "w") as devnull:
-#         old_stdout = sys.stdout
-#         sys.stdout = devnull
-#         try:  
-#             yield
-#         finally:
-#             sys.stdout = old_stdout
+from contextlib import contextmanager
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout
 
-
-import pkg_resources
-from setuptools.command.easy_install import main as install
-
-installed_pkgs = [d for d in pkg_resources.working_set]
+import pip
 
 required_pkgs = ['pysimplegui', 'openpyxl', 'python-docx']
+installed_pkgs = [pkg.key for pkg in pip.get_installed_distributions()]
 
 for package in required_pkgs:
     if package not in installed_pkgs:
-        install([package])
-
+        with suppress_stdout():
+            pip.main(['install', package])
 
 import PySimpleGUI as sg
 import re
